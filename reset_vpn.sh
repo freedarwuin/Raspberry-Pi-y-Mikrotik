@@ -33,9 +33,19 @@ sysctl -w net.ipv4.ip_forward=1
 sysctl -w net.ipv6.conf.all.forwarding=1
 
 echo "[+] Aplicando reglas iptables..."
-iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
-iptables -A FORWARD -i wg0 -j ACCEPT
-iptables -A FORWARD -o wg0 -j ACCEPT
+
+# Verificar si ya existe la regla MASQUERADE para wg0, si no, agregarla
+if ! sudo iptables -t nat -C POSTROUTING -o wg0 -j MASQUERADE 2>/dev/null; then
+  sudo iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
+fi
+
+# Asegurar FORWARD para wg0
+if ! sudo iptables -C FORWARD -i wg0 -j ACCEPT 2>/dev/null; then
+  sudo iptables -A FORWARD -i wg0 -j ACCEPT
+fi
+if ! sudo iptables -C FORWARD -o wg0 -j ACCEPT 2>/dev/null; then
+  sudo iptables -A FORWARD -o wg0 -j ACCEPT
+fi
 
 echo "[+] Levantando interfaz wg0..."
 wg-quick up wg0
