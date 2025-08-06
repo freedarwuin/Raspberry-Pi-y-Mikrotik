@@ -1,58 +1,74 @@
 #!/bin/bash
 
-echo "[+] Deteniendo interfaz wg0 si está activa..."
-wg-quick down wg0 2>/dev/null
+WG_CONF="/etc/wireguard/wg0.conf"
+WG_INTERFACE="wg0"
 
-echo "[+] Reescribiendo configuración wg0.conf..."
+echo "[+] Verificando si WireGuard está instalado..."
+if ! command -v wg >/dev/null || ! command -v wg-quick >/dev/null; then
+    echo "[!] WireGuard no está instalado. Instalando..."
+    sudo apt update && sudo apt install -y wireguard
+else
+    echo "[+] WireGuard ya está instalado."
+fi
 
-cat > /etc/wireguard/wg0.conf <<EOF
+echo "[+] Verificando si iptables está instalado..."
+if ! command -v iptables >/dev/null; then
+    echo "[!] iptables no está instalado. Instalando..."
+    sudo apt install -y iptables
+fi
+
+echo "[+] Verificando si resolvconf está instalado..."
+if ! command -v resolvconf >/dev/null; then
+    echo "[!] resolvconf no está instalado. Instalando..."
+    sudo apt install -y resolvconf
+fi
+
+echo "[+] Deteniendo interfaz $WG_INTERFACE si está activa..."
+sudo wg-quick down $WG_INTERFACE 2>/dev/null
+sudo ip link delete $WG_INTERFACE 2>/dev/null
+
+echo "[+] Creando directorio /etc/wireguard si no existe..."
+sudo mkdir -p /etc/wireguard
+sudo chmod 700 /etc/wireguard
+
+echo "[+] Creando archivo de configuración $WG_CONF..."
+sudo tee "$WG_CONF" > /dev/null <<EOF
 [Interface]
-PrivateKey = TU_CLAVE_PRIVADA
+PrivateKey = 4KZer+OYPcJ5kjjJlB7AUtelQm7XLKELvySjAXTHvno=
 Address = 10.2.0.2/32
 DNS = 10.2.0.1
-Table = 51820
-FwMark = 51820
 
 [Peer]
-PublicKey = CLAVE_PUBLICA_DEL_SERVIDOR
-Endpoint = ENDPOINT_DEL_SERVIDOR:51820
+PublicKey = FopxTTklZx2W9X1ua1rGHdn+w4F8KVwcBjVmqMFFbAI=
 AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = 195.181.162.163:51820
 PersistentKeepalive = 25
 EOF
 
-chmod 600 /etc/wireguard/wg0.conf
-
-echo "[+] Verificando si wg está instalado..."
-if ! command -v wg >/dev/null 2>&1; then
-  echo "Instalando WireGuard..."
-  apt update && apt install wireguard -y
-fi
-
 echo "[+] Activando reenvío de IP..."
-sysctl -w net.ipv4.ip_forward=1
-sysctl -w net.ipv6.conf.all.forwarding=1
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo sysctl -w net.ipv6.conf.all.forwarding=1
 
-echo "[+] Aplicando reglas iptables..."
+echo "[+] Limpiando reglas NAT anteriores..."
+sudo iptables -t nat -D POSTROUTING -o $WG_INTERFACE -j MASQUERADE 2>/dev/null
 
-# Verificar si ya existe la regla MASQUERADE para wg0, si no, agregarla
-if ! sudo iptables -t nat -C POSTROUTING -o wg0 -j MASQUERADE 2>/dev/null; then
-  sudo iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
+echo "[+] Aplicando NAT para $WG_INTERFACE..."
+sudo iptables -t nat -A POSTROUTING -o $WG_INTERFACE -j MASQUERADE
+
+echo "[+] Levantando interfaz $WG_INTERFACE..."
+if sudo wg-quick up $WG_INTERFACE; then
+    echo "[+] Interfaz $WG_INTERFACE levantada correctamente."
+
+    echo "[+] Verificando IP pública a través de la VPN..."
+    sleep 2
+    VPN_IP=$(curl -s --interface $WG_INTERFACE https://ifconfig.me)
+    if [[ -n "$VPN_IP" ]]; then
+        echo "[✓] Tu IP pública vía VPN es: $VPN_IP"
+    else
+        echo "[!] No se pudo obtener IP por $WG_INTERFACE. Verifica conectividad."
+    fi
+else
+    echo "[!] Error al levantar la interfaz VPN. Revisa el archivo de configuración."
+    echo "    Puedes probar manualmente con: sudo wg-quick up wg0"
+    echo "    Y ver logs con: sudo journalctl -xeu wg-quick@wg0.service"
 fi
-
-# Asegurar FORWARD para wg0
-if ! sudo iptables -C FORWARD -i wg0 -j ACCEPT 2>/dev/null; then
-  sudo iptables -A FORWARD -i wg0 -j ACCEPT
-fi
-if ! sudo iptables -C FORWARD -o wg0 -j ACCEPT 2>/dev/null; then
-  sudo iptables -A FORWARD -o wg0 -j ACCEPT
-fi
-
-echo "[+] Levantando interfaz wg0..."
-wg-quick up wg0
-
-echo "[+] Estado actual de la VPN:"
-wg show
-
-echo "[+] Verificando conexión a internet (VPN)..."
-VPN_IP=$(curl -s ifconfig.me)
-echo "[+] Tu IP pública vía VPN es: $VPN_IP"
