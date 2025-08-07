@@ -1,38 +1,26 @@
-# VPN WireGuard Gateway con Raspberry Pi
+# 🌐 VPN WireGuard Gateway con Raspberry Pi
 
-Este proyecto convierte tu Raspberry Pi en un router que enruta el tráfico a través de una VPN usando **WireGuard**.
+Convierte tu Raspberry Pi en un router VPN usando **WireGuard** y enruta el tráfico de tu red local a través de un túnel seguro.
 
-## 📦 Contenido
+## 📦 Archivos incluidos
 
-- `reset_vpn.sh`: Script para instalar, configurar y levantar automáticamente la VPN.
-- `wg0.conf`: Configuración generada automáticamente.
-- `.gitignore`: Protege tu archivo de configuración con claves.
+- `reset_vpn.sh`: Script automático para instalar, configurar, limpiar reglas y levantar la VPN.
+- `wg0.conf`: Archivo de configuración generado dinámicamente por el script.
+- `.gitignore`: Ignora el archivo `wg0.conf` para no subir claves sensibles al repositorio.
+
+---
 
 ## 🚀 Requisitos
 
-- Raspberry Pi con Debian (Raspbian, Raspberry Pi OS)
-- Acceso a internet
-- Permisos de superusuario
+- Raspberry Pi con sistema basado en Debian (Raspbian / Raspberry Pi OS).
+- Acceso a Internet (temporal o permanente).
+- Permisos de superusuario (`sudo`).
+- Paquetes necesarios: `wireguard`, `resolvconf`, `iptables`.
 
-## 🔐 Crear una cuenta en ProtonVPN y obtener credenciales
+---
 
-1. Ingresa a la página oficial de ProtonVPN: [https://protonvpn.com/](https://protonvpn.com/)
-
-2. Regístrate con un correo electrónico válido y crea una cuenta gratuita o de pago según tu preferencia.
-
-3. Una vez dentro del panel de usuario, ve a la sección **Downloads** o **WireGuard Configurations** (puede variar según la versión).
-
-4. Genera una configuración WireGuard para tu Raspberry Pi:
-    - Elige el país o servidor deseado (por ejemplo, US-Free#11).
-    - Descarga o copia la clave privada (`PrivateKey`), la clave pública del servidor (`PublicKey`) y el `Endpoint` (IP y puerto).
-
-5. Copia estos valores y reemplázalos en el archivo `reset_vpn.sh` en las líneas indicadas para que tu Raspberry Pi pueda conectarse a la VPN.
-
-## 🔐 Configuración
-
-Edita `reset_vpn.sh` y reemplaza:
+## 🔧 Instalación de dependencias (si no se instalan automáticamente)
 
 ```bash
-PrivateKey = TU_CLAVE_PRIVADA
-PublicKey  = CLAVE_PUBLICA_DEL_SERVIDOR
-Endpoint   = ENDPOINT_DEL_SERVIDOR:51820
+sudo apt update
+sudo apt install -y wireguard resolvconf iptables
