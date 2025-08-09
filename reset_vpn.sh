@@ -53,14 +53,14 @@ function setup_wireguard() {
     mkdir -p /etc/wireguard
     cat > $WG_CONF <<EOF
 [Interface]
-PrivateKey = 4KZer+OYPcJ5kjjJlB7AUtelQm7XLKELvySjAXTHvno=
+PrivateKey = 8AX1O20y6ClP8tpA6PCbA03uTuZ+1SE9IkVmLC5/eFw=
 Address = 10.2.0.2/32
 DNS = 10.2.0.1
 
 [Peer]
-PublicKey = FopxTTklZx2W9X1ua1rGHdn+w4F8KVwcBjVmqMFFbAI=
+PublicKey = wweP0YfxgQTCes+5UoXfhLbWXvHXGnwQkozFzvBA/i4=
 AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = 195.181.162.163:51820
+Endpoint = 185.177.126.102:51820
 PersistentKeepalive = 25
 EOF
     chmod 600 $WG_CONF
